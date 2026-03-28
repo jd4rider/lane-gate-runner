@@ -21,6 +21,8 @@ export type GameController = {
   destroy: () => void
   moveLeft: () => void
   moveRight: () => void
+  setTouchSteer: (normalizedX: number) => void
+  clearTouchSteer: () => void
   applySettings: (settings: GameSettings) => void
 }
 
@@ -69,6 +71,12 @@ export function createGame({
     },
     moveRight() {
       resolveGameScene()?.moveRight()
+    },
+    setTouchSteer(normalizedX) {
+      resolveGameScene()?.setTouchSteer(normalizedX)
+    },
+    clearTouchSteer() {
+      resolveGameScene()?.clearTouchSteer()
     },
     applySettings(settings) {
       resolveGameScene()?.applySettings(settings)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TouchEvent } from 'react'
+import { useEffect, useState, type TouchEvent } from 'react'
 import type { GameSettings, HudState } from '../game/config'
 
 type GameOverlayProps = {
@@ -8,11 +8,8 @@ type GameOverlayProps = {
   onPauseToggle: () => void
   onMoveLeft: () => void
   onMoveRight: () => void
-}
-
-type TouchPoint = {
-  x: number
-  y: number
+  onTouchSteer: (normalizedX: number) => void
+  onTouchSteerEnd: () => void
 }
 
 export function GameOverlay({
@@ -22,10 +19,11 @@ export function GameOverlay({
   onPauseToggle,
   onMoveLeft,
   onMoveRight,
+  onTouchSteer,
+  onTouchSteerEnd,
 }: GameOverlayProps) {
   const [touchCapable, setTouchCapable] = useState(false)
   const [compactHud, setCompactHud] = useState(false)
-  const touchStartRef = useRef<TouchPoint | null>(null)
 
   useEffect(() => {
     const pointerQuery = window.matchMedia('(pointer: coarse)')
@@ -66,47 +64,17 @@ export function GameOverlay({
       ? `Wave ${hud.endlessWave}`
       : `${Math.round(hud.progress * 100)}%`
 
-  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    const touch = event.changedTouches[0]
-
-    touchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-    }
-  }
-
-  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
-    const start = touchStartRef.current
-    const touch = event.changedTouches[0]
-
-    if (!start) {
-      return
-    }
-
-    const deltaX = touch.clientX - start.x
-    const deltaY = touch.clientY - start.y
-
-    if (Math.abs(deltaX) > 28 && Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (deltaX < 0) {
-        onMoveLeft()
-      } else {
-        onMoveRight()
-      }
-
-      touchStartRef.current = null
-      return
-    }
-
+  const steerFromTouch = (event: TouchEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect()
-    const localX = touch.clientX - bounds.left
+    const touch = event.changedTouches[0] ?? event.touches[0]
 
-    if (localX < bounds.width * 0.4) {
-      onMoveLeft()
-    } else if (localX > bounds.width * 0.6) {
-      onMoveRight()
+    if (!touch || bounds.width <= 0) {
+      return
     }
 
-    touchStartRef.current = null
+    const localX = touch.clientX - bounds.left
+    const normalizedX = Math.max(0, Math.min(1, localX / bounds.width))
+    onTouchSteer(normalizedX)
   }
 
   return (
@@ -167,8 +135,10 @@ export function GameOverlay({
         <>
           <div
             className="gesture-layer"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
+            onTouchStart={steerFromTouch}
+            onTouchMove={steerFromTouch}
+            onTouchEnd={onTouchSteerEnd}
+            onTouchCancel={onTouchSteerEnd}
           />
 
           <div className={`touch-controls${compactHud ? ' touch-controls--compact' : ''}`}>

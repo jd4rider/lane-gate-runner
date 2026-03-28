@@ -240,6 +240,10 @@ export default function App() {
                 }
                 onMoveLeft={() => controllerRef.current?.moveLeft()}
                 onMoveRight={() => controllerRef.current?.moveRight()}
+                onTouchSteer={(normalizedX) =>
+                  controllerRef.current?.setTouchSteer(normalizedX)
+                }
+                onTouchSteerEnd={() => controllerRef.current?.clearTouchSteer()}
               />
 
               {screen === 'paused' && (

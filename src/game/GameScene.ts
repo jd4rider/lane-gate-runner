@@ -97,6 +97,7 @@ export class GameScene extends Phaser.Scene {
   private hudTick = 0
   private paused = false
   private ended = false
+  private touchTargetX: number | null = null
 
   constructor() {
     super(GameScene.KEY)
@@ -115,6 +116,7 @@ export class GameScene extends Phaser.Scene {
     this.hudTick = 0
     this.paused = false
     this.ended = false
+    this.touchTargetX = null
     this.endlessWave = 1
     this.nextEndlessDistance = 0
     this.finishLine = undefined
@@ -206,6 +208,24 @@ export class GameScene extends Phaser.Scene {
 
   moveRight() {
     this.shiftLane(1)
+  }
+
+  setTouchSteer(normalizedX: number) {
+    if (this.paused || this.ended) {
+      return
+    }
+
+    this.laneTween?.stop()
+    this.touchTargetX = this.resolveTouchTargetX(normalizedX)
+  }
+
+  clearTouchSteer() {
+    if (this.touchTargetX === null) {
+      return
+    }
+
+    this.touchTargetX = null
+    this.snapToLane(this.findClosestLane(this.player.x))
   }
 
   applySettings(settings: GameSettings) {
@@ -302,6 +322,7 @@ export class GameScene extends Phaser.Scene {
         : this.activeLevel.runSpeed ?? DEFAULT_RUN_SPEED
 
     this.playerDistance += (delta / 1000) * runSpeed
+    this.updateHorizontalControl(delta)
     this.updateScenePositions()
   }
 
@@ -316,14 +337,8 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
-    this.targetLane = nextLane
-    this.laneTween?.stop()
-    this.laneTween = this.tweens.add({
-      targets: this.player,
-      x: LANE_X[this.targetLane],
-      duration: LANE_CHANGE_DURATION,
-      ease: 'Sine.Out',
-    })
+    this.touchTargetX = null
+    this.snapToLane(nextLane)
   }
 
   private spawnElement(element: LevelElement) {
@@ -629,6 +644,48 @@ export class GameScene extends Phaser.Scene {
     const distanceScore = Math.floor(this.playerDistance * 0.42)
     const crowdScore = Math.max(0, this.unitCount - 1) * 15
     return Math.max(0, distanceScore + crowdScore + this.scoreOffset)
+  }
+
+  private updateHorizontalControl(delta: number) {
+    if (this.touchTargetX === null) {
+      return
+    }
+
+    const smoothing = 1 - Math.exp(-delta * 0.022)
+    this.player.x = Phaser.Math.Linear(this.player.x, this.touchTargetX, smoothing)
+    this.targetLane = this.findClosestLane(this.player.x)
+  }
+
+  private snapToLane(lane: LaneIndex) {
+    this.targetLane = lane
+    this.laneTween?.stop()
+    this.laneTween = this.tweens.add({
+      targets: this.player,
+      x: LANE_X[this.targetLane],
+      duration: LANE_CHANGE_DURATION,
+      ease: 'Sine.Out',
+    })
+  }
+
+  private resolveTouchTargetX(normalizedX: number) {
+    const clamped = Phaser.Math.Clamp(normalizedX, 0, 1)
+    return Phaser.Math.Linear(LANE_X[0], LANE_X[2], clamped)
+  }
+
+  private findClosestLane(currentX: number): LaneIndex {
+    let closestLane: LaneIndex = 0
+    let closestDistance = Number.POSITIVE_INFINITY
+
+    for (const lane of [0, 1, 2] as const) {
+      const laneDistance = Math.abs(currentX - LANE_X[lane])
+
+      if (laneDistance < closestDistance) {
+        closestLane = lane
+        closestDistance = laneDistance
+      }
+    }
+
+    return closestLane
   }
 
   private resolveScreenY(distance: number) {
