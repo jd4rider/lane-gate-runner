@@ -225,7 +225,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.touchTargetX = null
-    this.snapToLane(this.findClosestLane(this.player.x))
   }
 
   applySettings(settings: GameSettings) {
