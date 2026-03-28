@@ -3,10 +3,13 @@ import {
   CAMERA_FOLLOW_Y,
   DEFAULT_RUN_SPEED,
   DEFAULT_SETTINGS,
+  ENDLESS_TRACK_START_Y,
+  ENDLESS_WORLD_HEIGHT,
   GAME_HEIGHT,
   GAME_WIDTH,
   LANE_CHANGE_DURATION,
   LANE_X,
+  LEVEL_TRACK_PADDING,
   MAX_VISIBLE_CROWD,
   PLAYER_BASE_Y,
   type BootSceneData,
@@ -98,6 +101,7 @@ export class GameScene extends Phaser.Scene {
   private hudTick = 0
   private paused = false
   private ended = false
+  private trackStartY = PLAYER_BASE_Y
 
   constructor() {
     super(GameScene.KEY)
@@ -120,6 +124,7 @@ export class GameScene extends Phaser.Scene {
     this.nextEndlessDistance = 0
     this.finishLine = undefined
     this.endlessFactory = undefined
+    this.trackStartY = PLAYER_BASE_Y
   }
 
   create() {
@@ -134,15 +139,21 @@ export class GameScene extends Phaser.Scene {
             elements: [],
           }
 
+    this.trackStartY =
+      this.session.mode === 'level'
+        ? PLAYER_BASE_Y + this.activeLevel.targetDistance + LEVEL_TRACK_PADDING
+        : ENDLESS_TRACK_START_Y
+
     const worldHeight =
       this.session.mode === 'level'
-        ? PLAYER_BASE_Y + this.activeLevel.targetDistance + 1200
-        : 200000
+        ? this.trackStartY + LEVEL_TRACK_PADDING
+        : ENDLESS_WORLD_HEIGHT
 
     this.cameras.main.setBounds(0, 0, GAME_WIDTH, worldHeight)
     this.cameras.main.setBackgroundColor(0x08101d)
     this.createRoad()
     this.createPlayer()
+    this.syncCameraPosition()
     this.registerInputs()
 
     if (this.session.mode === 'level') {
@@ -253,7 +264,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    this.player = this.add.container(LANE_X[1], PLAYER_BASE_Y, [
+    this.player = this.add.container(LANE_X[1], this.resolveWorldY(0), [
       glow,
       this.playerShadow,
       core,
@@ -308,11 +319,8 @@ export class GameScene extends Phaser.Scene {
         : this.activeLevel.runSpeed ?? DEFAULT_RUN_SPEED
 
     this.playerDistance += (delta / 1000) * runSpeed
-    this.player.y = PLAYER_BASE_Y + this.playerDistance
-
-    const cameraTarget = Math.max(0, this.player.y - CAMERA_FOLLOW_Y)
-    this.cameras.main.scrollY = cameraTarget
-    this.road.tilePositionY = this.cameras.main.scrollY
+    this.player.y = this.resolveWorldY(this.playerDistance)
+    this.syncCameraPosition()
   }
 
   private shiftLane(direction: -1 | 1) {
@@ -357,7 +365,7 @@ export class GameScene extends Phaser.Scene {
 
     const container = this.add.container(
       LANE_X[element.lane],
-      PLAYER_BASE_Y + element.distance,
+      this.resolveWorldY(element.distance),
     )
 
     const glow = this.add.rectangle(0, 0, 110, 64, fillColor, 0.18)
@@ -390,7 +398,7 @@ export class GameScene extends Phaser.Scene {
   private spawnHazard(element: HazardSpec) {
     const container = this.add.container(
       LANE_X[element.lane],
-      PLAYER_BASE_Y + element.distance,
+      this.resolveWorldY(element.distance),
     )
 
     const glow = this.add.rectangle(0, 0, 106, 54, 0xef4444, 0.12)
@@ -426,7 +434,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnFinishLine(distance: number) {
-    const container = this.add.container(GAME_WIDTH / 2, PLAYER_BASE_Y + distance)
+    const container = this.add.container(GAME_WIDTH / 2, this.resolveWorldY(distance))
 
     const banner = this.add.rectangle(0, -36, 224, 42, 0xf8fafc, 0.92)
     banner.setStrokeStyle(4, 0x0f172a, 0.9)
@@ -639,6 +647,16 @@ export class GameScene extends Phaser.Scene {
     const distanceScore = Math.floor(this.playerDistance * 0.42)
     const crowdScore = Math.max(0, this.unitCount - 1) * 15
     return Math.max(0, distanceScore + crowdScore + this.scoreOffset)
+  }
+
+  private resolveWorldY(distance: number) {
+    return this.trackStartY - distance
+  }
+
+  private syncCameraPosition() {
+    const cameraTarget = Math.max(0, this.player.y - CAMERA_FOLLOW_Y)
+    this.cameras.main.scrollY = cameraTarget
+    this.road.tilePositionY = -this.playerDistance
   }
 
   private emitHud(force = false) {

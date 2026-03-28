@@ -6,6 +6,9 @@ export const DEFAULT_RUN_SPEED = 248
 export const LANE_CHANGE_DURATION = 140
 export const MAX_VISIBLE_CROWD = 18
 export const LANE_X = [104, 210, 316] as const
+export const LEVEL_TRACK_PADDING = 640
+export const ENDLESS_WORLD_HEIGHT = 200000
+export const ENDLESS_TRACK_START_Y = ENDLESS_WORLD_HEIGHT - 1200
 
 export const STORAGE_KEYS = {
   bestScore: 'lane-gate-runner-best-score',
