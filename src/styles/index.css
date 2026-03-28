@@ -31,6 +31,7 @@ body,
 
 body {
   min-width: 320px;
+  overflow-x: hidden;
 }
 
 button,
@@ -43,13 +44,26 @@ button {
 }
 
 .app-shell {
-  min-height: 100vh;
-  padding: 24px;
+  min-height: 100dvh;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+}
+
+.app-shell--play {
+  padding: 0;
 }
 
 .app-layout {
   width: min(1120px, 100%);
   margin: 0 auto;
+}
+
+.app-layout--play {
+  width: 100%;
+  min-height: 100dvh;
 }
 
 .start-screen {
@@ -292,6 +306,25 @@ button {
 .play-view {
   display: flex;
   justify-content: center;
+  align-items: center;
+}
+
+.app-layout--play .play-view {
+  min-height: 100dvh;
+  --play-padding: 8px;
+  --safe-top: env(safe-area-inset-top);
+  --safe-right: env(safe-area-inset-right);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
+  --available-height:
+    calc(100dvh - var(--safe-top) - var(--safe-bottom) - (var(--play-padding) * 2));
+  --available-width:
+    calc(100vw - var(--safe-left) - var(--safe-right) - (var(--play-padding) * 2));
+  padding:
+    max(var(--play-padding), var(--safe-top))
+    max(var(--play-padding), var(--safe-right))
+    max(var(--play-padding), var(--safe-bottom))
+    max(var(--play-padding), var(--safe-left));
 }
 
 .game-stage {
@@ -303,6 +336,12 @@ button {
   border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: var(--shadow);
   background: #08101d;
+}
+
+.app-layout--play .game-stage {
+  width: min(calc(var(--available-height) * 420 / 760), var(--available-width), 420px);
+  height: min(var(--available-height), calc(var(--available-width) * 760 / 420), 760px);
+  aspect-ratio: auto;
 }
 
 .phaser-mount,
@@ -446,7 +485,11 @@ button {
 
 @media (max-width: 560px) {
   .app-shell {
-    padding: 12px;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
   }
 
   .hero-card,
@@ -465,21 +508,59 @@ button {
     border-radius: 22px;
   }
 
-  .hud-top {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .hud-root--compact {
+    justify-content: flex-start;
   }
 
-  .hud-card--wide {
-    grid-column: 1 / -1;
+  .hud-top--compact {
+    grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 0.9fr)) auto;
+    gap: 6px;
+    padding: max(8px, env(safe-area-inset-top)) 8px 0;
   }
 
-  .pause-button {
-    grid-column: 1 / -1;
+  .hud-top--compact .hud-card {
+    padding: 8px 10px;
+    border-radius: 14px;
   }
 
-  .hud-footer {
-    flex-direction: column;
-    align-items: flex-start;
-    padding-bottom: 92px;
+  .hud-top--compact .hud-card--wide {
+    gap: 5px;
+  }
+
+  .hud-top--compact .hud-card span,
+  .hud-footer--compact span {
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+  }
+
+  .hud-top--compact .hud-card strong {
+    margin-top: 2px;
+    font-size: 0.94rem;
+    line-height: 1;
+  }
+
+  .pause-button--compact {
+    padding: 10px 11px;
+    border-radius: 14px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    align-self: stretch;
+  }
+
+  .hud-footer--compact {
+    justify-content: space-between;
+    padding: 6px 8px 0;
+  }
+
+  .touch-controls--compact {
+    inset: auto 8px max(8px, env(safe-area-inset-bottom)) 8px;
+    gap: 8px;
+  }
+
+  .touch-controls--compact button {
+    min-height: 50px;
+    border-radius: 16px;
+    font-size: 0.76rem;
+    opacity: 0.88;
   }
 }

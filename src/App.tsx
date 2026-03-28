@@ -211,8 +211,8 @@ export default function App() {
   }, [session, screen])
 
   return (
-    <div className="app-shell">
-      <main className="app-layout">
+    <div className={`app-shell${screen === 'title' ? '' : ' app-shell--play'}`}>
+      <main className={`app-layout${screen === 'title' ? '' : ' app-layout--play'}`}>
         {screen === 'title' ? (
           <StartScreen
             levels={LEVELS}

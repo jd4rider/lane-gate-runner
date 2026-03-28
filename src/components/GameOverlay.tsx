@@ -24,17 +24,40 @@ export function GameOverlay({
   onMoveRight,
 }: GameOverlayProps) {
   const [touchCapable, setTouchCapable] = useState(false)
+  const [compactHud, setCompactHud] = useState(false)
   const touchStartRef = useRef<TouchPoint | null>(null)
 
   useEffect(() => {
     const pointerQuery = window.matchMedia('(pointer: coarse)')
+    const compactQuery = window.matchMedia('(max-width: 560px)')
     const updateTouchState = () => {
       setTouchCapable(pointerQuery.matches || navigator.maxTouchPoints > 0)
+      setCompactHud(compactQuery.matches)
+    }
+
+    const attach = (query: MediaQueryList) => {
+      if (typeof query.addEventListener === 'function') {
+        query.addEventListener('change', updateTouchState)
+        return () => query.removeEventListener('change', updateTouchState)
+      }
+
+      const legacyQuery = query as MediaQueryList & {
+        addListener: (listener: (event: MediaQueryListEvent) => void) => void
+        removeListener: (listener: (event: MediaQueryListEvent) => void) => void
+      }
+
+      legacyQuery.addListener(updateTouchState)
+      return () => legacyQuery.removeListener(updateTouchState)
     }
 
     updateTouchState()
-    pointerQuery.addEventListener('change', updateTouchState)
-    return () => pointerQuery.removeEventListener('change', updateTouchState)
+    const detachPointer = attach(pointerQuery)
+    const detachCompact = attach(compactQuery)
+
+    return () => {
+      detachPointer()
+      detachCompact()
+    }
   }, [])
 
   const showTouchControls = settings.showTouchZones && touchCapable
@@ -87,8 +110,8 @@ export function GameOverlay({
   }
 
   return (
-    <div className="hud-root">
-      <div className="hud-top">
+    <div className={`hud-root${compactHud ? ' hud-root--compact' : ''}`}>
+      <div className={`hud-top${compactHud ? ' hud-top--compact' : ''}`}>
         <div className="hud-card hud-card--wide">
           <span>{hud.levelName}</span>
           <strong>{progressLabel}</strong>
@@ -110,19 +133,34 @@ export function GameOverlay({
           <strong>{hud.score}</strong>
         </div>
 
-        <div className="hud-card">
-          <span>Best</span>
-          <strong>{hud.bestScore}</strong>
-        </div>
+        {!compactHud && (
+          <div className="hud-card">
+            <span>Best</span>
+            <strong>{hud.bestScore}</strong>
+          </div>
+        )}
 
-        <button type="button" className="pause-button" onClick={onPauseToggle}>
+        <button
+          type="button"
+          className={`pause-button${compactHud ? ' pause-button--compact' : ''}`}
+          onClick={onPauseToggle}
+        >
           {paused ? 'Resume' : 'Pause'}
         </button>
       </div>
 
-      <div className="hud-footer">
-        <span>Distance {hud.distance}m</span>
-        <span>Controls: arrows, A / D, swipe</span>
+      <div className={`hud-footer${compactHud ? ' hud-footer--compact' : ''}`}>
+        {compactHud ? (
+          <>
+            <span>Best {hud.bestScore}</span>
+            <span>{hud.distance}m</span>
+          </>
+        ) : (
+          <>
+            <span>Distance {hud.distance}m</span>
+            <span>Controls: arrows, A / D, swipe</span>
+          </>
+        )}
       </div>
 
       {showTouchControls && (
@@ -133,7 +171,7 @@ export function GameOverlay({
             onTouchEnd={handleTouchEnd}
           />
 
-          <div className="touch-controls">
+          <div className={`touch-controls${compactHud ? ' touch-controls--compact' : ''}`}>
             <button type="button" onPointerDown={onMoveLeft}>
               Left
             </button>
